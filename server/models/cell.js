@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
   };
   Cell.createRules = () => ({
     name: 'required',
-    numberOfLockers: 'required'
+    numberOfLockers: 'required|integer'
   });
   return Cell;
 };

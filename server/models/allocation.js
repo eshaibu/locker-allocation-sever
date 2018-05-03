@@ -30,5 +30,12 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'CASCADE'
     });
   };
+  Allocation.createRules = () => ({
+    cellId: 'required',
+    requestBy: 'required|email',
+    lockerNumber: 'required|integer',
+    requestStatus: 'required|in:request,approved,rejected',
+  });
+
   return Allocation;
 };
