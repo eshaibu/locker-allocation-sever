@@ -14,7 +14,7 @@ module.exports = {
       },
       cellId: {
         allowNull: false,
-        type: Sequelize.ENUM('request', 'approved', 'rejected'),
+        type: Sequelize.INTEGER,
         references: {
           model: 'Cells',
           key: 'id',
@@ -27,7 +27,7 @@ module.exports = {
       },
       requestStatus: {
         allowNull: false,
-        type: Sequelize.INTEGER
+        type: Sequelize.ENUM('request', 'approved', 'rejected')
       },
       expired: {
         allowNull: true,
