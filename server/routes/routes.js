@@ -10,12 +10,13 @@ const routes = (router) => {
 
   router.route('/cells')
     .post(cellController.create)
-    .get(cellController.retrieve)
+    .get(cellController.list)
 
 
   router.route('/cells/:id')
+    .get(cellController.retrieve)
     .patch(cellController.update)
-    .delete(cellController.deleteCell)
+    .delete(cellController.deleteCell);
 
   router.route('/allocations')
     .post(allocationController.create);

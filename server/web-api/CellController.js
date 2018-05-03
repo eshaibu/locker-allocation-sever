@@ -26,6 +26,18 @@ const cellController = {
 
   async retrieve(req, res) {
     try{
+      const cellExist = await cellModel.findById(req.params.id);
+      if(cellExist) {
+        return res.status(200).json({ message: 'Cell retrieved', data: cellExist });
+      }
+      return res.status(404).json({ message: 'Cell does not exist' });
+    } catch (errors) {
+      return res.status(400).json({ message: 'Some server problems, please try again', errors });
+    }
+  },
+
+  async list(req, res) {
+    try{
         const cells = await cellModel.findAndCountAll();
       return res.status(200).json({ message: 'List of cells', data: cells });
     } catch (errors) {
