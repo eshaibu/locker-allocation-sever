@@ -4,6 +4,7 @@ import Sequelize from 'sequelize';
 
 const Op = Sequelize.Op;
 const cellModel = db.Cell;
+const allocationModel = db.Allocation;
 
 const cellController = {
   async create(req, res) {
@@ -28,7 +29,20 @@ const cellController = {
     try{
       const cellExist = await cellModel.findById(req.params.id);
       if(cellExist) {
-        return res.status(200).json({ message: 'Cell retrieved', data: cellExist });
+        const lockerNoArray = Array.from({length: cellExist.numberOfLockers}, (v, k) => k+1);
+        const lockerOccupiedInCell = await allocationModel.findAll({
+          where: {
+            cellId: req.params.id,
+            requestStatus: {
+              [Op.ne]: 'rejected'
+            },
+            expired: null,
+          }
+        });
+        const  unavailableLockers = lockerOccupiedInCell.map((allocation) => allocation.lockerNumber);
+        const availableLockers = lockerNoArray.filter((lockerNumber) => !unavailableLockers.includes(lockerNumber));
+        const cell = { ...cellExist.dataValues, lockerNoArray, unavailableLockers, availableLockers };
+        return res.status(200).json({ message: 'Cell retrieved', data: cell });
       }
       return res.status(404).json({ message: 'Cell does not exist' });
     } catch (errors) {

@@ -70,6 +70,10 @@ const allocationController = {
           await allocationExist.update({ requestStatus: 'approved', expired: null });
           return res.status(201).json({ message: 'Approved and key collected' });
         }
+        if(req.body.action === 'reject'){
+          await allocationExist.update({ requestStatus: 'rejected', expired: new Date() });
+          return res.status(201).json({ message: 'Rejected request' });
+        }
         await allocationExist.update({ expired: new Date() });
         return res.status(201).json({ message: 'Locker key successfully returned' });
       }
