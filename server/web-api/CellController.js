@@ -12,14 +12,14 @@ const cellController = {
         const nameExist = await cellModel.findOne({ where: { name } });
         if(!nameExist) {
           const cell = await cellModel.create({ name, numberOfLockers });
-        return res.status(201).json({ message: 'Cell creation successful ', data: cell });
+          return res.status(201).json({ message: 'Cell creation successful', data: cell });
         }
+        return res.status(409).json({ message: 'Name already exist' });
       } else {
         return res.status(400).json({ message: 'validation error(s)', errors: validator.errors.all() });
       }
     } catch (errors) {
-      return res.status(400).json(
-        { message: 'Some server problems, please try again', errors });
+      return res.status(400).json({ message: 'Some server problems, please try again', errors });
     }
   }
 };

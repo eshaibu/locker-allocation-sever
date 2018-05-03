@@ -8,8 +8,15 @@ const routes = (router) => {
     });
   });
 
-  router.route('/cell')
+  router.route('/cells')
     .post(cellController.create);
+
+  router.route('/allocations')
+    .post(allocationController.create);
+
+  router.route('/allocations/:id')
+    .patch(allocationController.approveOrExpire)
+    // .get(allocationController.retrieve)
 };
 
 export default routes;

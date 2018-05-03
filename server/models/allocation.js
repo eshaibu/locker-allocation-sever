@@ -1,6 +1,6 @@
 'use strict';
-module.exports = (sequelize, DataTypes) => {
-  var Allocation = sequelize.define('Allocation', {
+const allocationModel = (sequelize, DataTypes) => {
+  const Allocation = sequelize.define('Allocation', {
     requestBy: {
       type: DataTypes.STRING,
       allowNull: false
@@ -30,6 +30,7 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'CASCADE'
     });
   };
+
   Allocation.createRules = () => ({
     cellId: 'required',
     requestBy: 'required|email',
@@ -39,3 +40,5 @@ module.exports = (sequelize, DataTypes) => {
 
   return Allocation;
 };
+
+export default allocationModel;
