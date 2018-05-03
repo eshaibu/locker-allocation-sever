@@ -9,7 +9,13 @@ const routes = (router) => {
   });
 
   router.route('/cells')
-    .post(cellController.create);
+    .post(cellController.create)
+    .get(cellController.retrieve)
+
+
+  router.route('/cells/:id')
+    .patch(cellController.update)
+    .delete(cellController.deleteCell)
 
   router.route('/allocations')
     .post(allocationController.create);

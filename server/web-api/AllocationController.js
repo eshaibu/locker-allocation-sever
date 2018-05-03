@@ -55,9 +55,8 @@ const allocationController = {
           return res.status(201).json({ message: 'Locker request successful', data });
         }
         return res.status(400).json({ message: 'Invalid locker number' });
-      } else {
-        return res.status(400).json({ message: 'validation error(s)', errors: validator.errors.all() });
       }
+      return res.status(400).json({ message: 'validation error(s)', errors: validator.errors.all() });
     } catch (errors) {
       return res.status(400).json({ message: 'Some server problems, please try again', errors });
     }

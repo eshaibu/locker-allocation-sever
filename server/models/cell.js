@@ -9,7 +9,9 @@ const cellModel = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false
     }
-  }, {});
+  }, {
+    paranoid: true,
+  });
   Cell.associate = function(models) {
     // associations can be defined here
     Cell.hasMany(models.Allocation, {
