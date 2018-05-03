@@ -6,6 +6,8 @@
 and continue your configurations
 * Setup your database and update your .env file with the new database details
 * Install dependencies => `npm install`
+* Migrate your database by running this command `npm run db_migrate`
+* Start the application development environment with command `npm run dev`
 
 ## Our Approaches
 * We will be using [ValidatorJS](https://github.com/skaterdav85/validatorjs) for validation.

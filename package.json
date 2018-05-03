@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon server/app.js --exec babel-node",
     "start": "node ./dist/app.js",
-    "heroku-postbuild": "npx babel server/ --out-dir dist/"
+    "heroku-postbuild": "npx babel server/ --out-dir dist/",
+    "db_migrate": "node_modules/.bin/sequelize db:migrate"
   },
   "repository": {
     "type": "git",
