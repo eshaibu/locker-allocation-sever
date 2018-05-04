@@ -7,7 +7,10 @@
     "dev": "nodemon server/app.js --exec babel-node",
     "start": "node ./dist/app.js",
     "heroku-postbuild": "npx babel server/ --out-dir dist/",
-    "db_migrate": "node_modules/.bin/sequelize db:migrate"
+    "db_migrate": "node_modules/.bin/sequelize db:migrate",
+    "db_undo_migrate": "node_modules/.bin/sequelize db:migrate:undo:all",
+    "db_seed": "node_modules/.bin/sequelize db:seed:all",
+    "db_undo_seed": "node_modules/.bin/sequelize db:seed:undo:all"
   },
   "repository": {
     "type": "git",
