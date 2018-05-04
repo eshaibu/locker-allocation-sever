@@ -14,33 +14,33 @@ module.exports = {
     */
     return queryInterface.bulkInsert('Cells', [
       {
-        name: 'Gold Coast (1st floor left wing)',
+        name: 'Gold Coast',
         numberOfLockers: 50,
         createdAt: new Date(),
         updatedAt: new Date()
       }, {
-        name: 'Kampala (3rd floor right wing)',
+        name: 'Kampala',
         numberOfLockers: 60,
         createdAt: new Date(),
         updatedAt: new Date()
       }, {
-        name: 'The Big Apple (4th floor left wing)',
+        name: 'The Big Apple',
         numberOfLockers: 40,
         createdAt: new Date(),
         updatedAt: new Date()
       }, {
-        name: 'Safari (4th floor right wing)',
+        name: 'Safari',
         numberOfLockers: 55,
         createdAt: new Date(),
         updatedAt: new Date()
       }, {
-        name: 'Eko (5th floor left wing)',
+        name: 'Eko',
         numberOfLockers: 30,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        name: 'City by the bay (5th floor right wing)',
+        name: 'City by the bay',
         numberOfLockers: 75,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -56,6 +56,6 @@ module.exports = {
       Example:
       return queryInterface.bulkDelete('Person', null, {});
     */
-    return queryInterface.bulkDelete('Cell', null, {});
+    return queryInterface.bulkDelete('Cells', null, {});
   }
 };
