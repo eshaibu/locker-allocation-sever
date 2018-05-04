@@ -31,7 +31,7 @@ const routes = (router) => {
   router.get('/slack/authorise/', slack.authorise);
   router.get('/slack/authenticate/', slack.saveToken);
   router.post('/findKey', slackAuth, slack.findKey);
-  router.post('/selectKey', validateSubmission, slackAuth, slack.selectKey);
+  // router.post('/selectKey', validateSubmission, slackAuth, slack.selectKey);
 };
 
 export default routes;

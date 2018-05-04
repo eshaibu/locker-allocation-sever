@@ -11,7 +11,7 @@ export const sendMessage = ({ responseUrl, message: text, response_type }) => {
     .catch(error => console.log(error));
 }
 
-export const sendPrivateMessage = (token, userId, message, payload) {
+export const sendPrivateMessage = (token, userId, message, payload) =>{
   let authObject = new WebClient(token);
 
   return authObject.im.open(userId)

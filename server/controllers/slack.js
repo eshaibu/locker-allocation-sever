@@ -3,9 +3,13 @@ import buildUrl from 'build-url';
 import axios from 'axios';
 import uuid from 'uuid';
 import async from 'async';
-import { testSlackToken } from '../helpers/slackHelpers';
 import Sequelize from 'sequelize';
+import { testSlackToken } from '../helpers/slackHelpers';
 import db from '../models/';
+
+import User from '../models/user';
+import Team from '../models/team';
+import Cell from '../models/cell';
 
 const Op = Sequelize.Op;
 
@@ -13,126 +17,122 @@ const cellModel = db.Cell;
 const userModel = db.User;
 const allocationModel = db.Allocation;
 
-import User from '../models/user';
-import Team from '../models/team';
-import Cell from '../models/cell';
-
-const authUrl = "https://slack.com/oauth/authorize";
-const scope = "commands,bot,im:write,reactions:read,users.profile:read,chat:write:bot,users:read,users:read.email,chat:write:user";
+const authUrl = 'https://slack.com/oauth/authorize';
+const scope = 'commands,bot,im:write,reactions:read,users.profile:read,chat:write:bot,users:read,users:read.email,chat:write:user';
 
 const slack = {
-  authorise: function(req, res, next) {
-    let teamId = req.params.id.toUpperCase();
+  authorise(req, res, next) {
+    const teamId = req.params.id.toUpperCase();
     Team.findOne({
       where: {
-        teamId: teamId
+        teamId
       }
     }).then((team) => {
       if (!team) {
-        let state = uuid.v4();
+        const state = uuid.v4();
         Team.create({
           regState: state,
-          teamId: teamId
+          teamId
         })
           .then((team) => {
             console.log(team);
           })
-          .catch(error => console.log(error))
+          .catch(error => console.log(error));
       } else {
-        state = team.regState
+        state = team.regState;
       }
 
-      let queryParams = {
+      const queryParams = {
         client_id: process.env.SLACK_CLIENT_ID,
-        scope: scope,
-        redirect_uri: process.env.BASE_URI + "slack/authenticate",
-        state: state
+        scope,
+        redirect_uri: `${process.env.BASE_URI}slack/authenticate`,
+        state
       };
 
-      let url = buildUrl(authUrl, { queryParams });
+      const url = buildUrl(authUrl, { queryParams });
       return res.redirect(url);
-    })
+    });
   },
 
-  saveToken: function(req, res, next) {
+  saveToken(req, res, next) {
     if (!req.query.code) {
-      return res.redirect(process.env.BASE_URI + "fail");
+      return res.redirect(`${process.env.BASE_URI}fail`);
     }
 
-    let code = req.query.code;
-    let regState = req.query.state;
-    let authed = new WebClient();
+    const code = req.query.code;
+    const regState = req.query.state;
+    const authed = new WebClient();
 
     authed.oauth.access(process.env.SLACK_CLIENT_ID, process.env.SLACK_CLIENT_SECRET, code)
-      .then(function(data) {
+      .then((data) => {
         // TODO: save the access token to the team
 
-        if(regState) {
+        if (regState) {
           Team.findOne({
             where: {
-              regState: regState
+              regState
             }
-          }).then(function(team) {
-            if (!team) return res.redirect(process.env.BASE_URI + 'fail');
+          }).then((team) => {
+            if (!team) return res.redirect(`${process.env.BASE_URI}fail`);
 
             testSlackToken(data.access_token)
-              .then(function(verifiedData) {
-                let teamId = verifiedData.team_id;
+              .then((verifiedData) => {
+                const teamId = verifiedData.team_id;
 
                 async.parallel([
-                  function(cb){
-                    let userId = verifiedData.user_id;
-                    User.findOrCreate({ where: { userId: userId  } , defaults:  { teamId: teamId }})
-                      .then(function(user) {
+                  function (cb) {
+                    const userId = verifiedData.user_id;
+                    User.findOrCreate({ where: { userId }, defaults: { teamId } })
+                      .then((user) => {
                         cb();
                       })
-                      .catch(function(error) {
+                      .catch((error) => {
                         return res.send('Error saving slack token');
                       });
                   },
-                  function(cb){
-                    Team.update({ bot: data.bot.bot_access_token, slackToken: data.access_token }, { where: { teamId: teamId } })
-                      .then(function(team) {
-                        cb()
+                  function (cb) {
+                    Team.update({ bot: data.bot.bot_access_token, slackToken: data.access_token }, { where: { teamId } })
+                      .then((team) => {
+                        cb();
                       })
-                      .catch(function(error) {
+                      .catch((error) => {
                         return res.send('Error saving slack token');
                       });
-                  }], function(er, result){
-                    return p.redirect(process.env.BASE_URI + "calendar/authorise/" + userid);
-                  });
+                  }], (er, result) => {
+                  return p.redirect(`${process.env.BASE_URI}calendar/authorise/${userid}`);
+                });
               })
-              .catch(function(error) {
-                console.log("Auth test error", error);
-              })
+              .catch((error) => {
+                console.log('Auth test error', error);
+              });
           })
-            .catch(function(error) {
+            .catch((error) => {
               console.log('Error searching for user', error);
             });
         } else {
-          return res.redirect(process.env.BASE_URI + 'fail');
+          return res.redirect(`${process.env.BASE_URI}fail`);
         }
       })
-      .catch(function(error) {
+      .catch((error) => {
         console.log('Some Auth error', e);
-      })
+      });
   },
 
   findKey: async (req, res) => {
-    try{
-      let cellText = (req.body.text).toLowerCase();
-      const authed = new WebClient(req.person.access);
+    try {
+      const cellText = (req.body.text).toLowerCase();
+      const authed = new WebClient(req.body.token);
 
       const cells = await cellModel.findAll();
       const cellNames = cells.map(cell => cell.name);
       const cellNamesString = cellNames.join(', ');
 
-      const cell = cells.find((cell) => cell.name === cellText);
+      const cell = cells.find(cell => cell.name === cellText);
 
       const checkModel = cellNames.includes(cellText);
 
-      if (!checkModel){
-        let errorMessage = `Please enter a valid location, one of the item in list [${cellNamesString}]`;
+      if (!checkModel) {
+        const errorMessage = `Please enter a valid location, one of the item in list [${cellNamesString}]`;
         return authed.chat.postMessage({ channel: q.body.channel_id, text: errorMessage });
       }
 
@@ -150,7 +150,7 @@ const slack = {
           email: req.body.user_name,
           regstate: uuid.v4()
         });
-      } else{
+      } else {
         await userModel.update({ cellId: cell.id }, { where: {
           userId: req.body.user_id
         } });
@@ -170,67 +170,67 @@ const slack = {
       const availableLockers = lockerNoArray.filter(lockerNumber => !unavailableLockers.includes(lockerNumber));
 
 
-      let options = availableLockers.map((keyValue) => ({
+      const options = availableLockers.map(keyValue => ({
         text: `Key ${keyValue}`,
         value: keyValue
       }));
 
-      let messagePayload = {
-        channel  : req.body.channel_id,
-        text : `Select a locker from ${cell.name}`,
-        fallback : `Select a locker from ${cell.name}`,
-        color : "#3AA3E3",
-        attachment_type : "default",
-        callback_id : "locker_selection",
-        actions : [
-          "name": 'empty_lockers',
-        "text": `Pick a locker on ${cell.name}`,
-        "type": "select",
-        options
-    ]
-    };
+      const messagePayload = {
+        channel: req.body.channel_id,
+        text: `Select a locker from ${cell.name}`,
+        fallback: `Select a locker from ${cell.name}`,
+        color: '#3AA3E3',
+        attachment_type: 'default',
+        callback_id: 'locker_selection',
+        actions: [{
+          name: 'empty_lockers',
+          text: `Pick a locker on ${cell.name}`,
+          type: 'select',
+          options
+        }]
+      };
 
-    const result = await authed.chat.postMessage(messagePayload);
-    console.log('message sent', result);
+      const result = await authed.chat.postMessage(messagePayload);
+      console.log('message sent', result);
     } catch (errors) {
       console.log('error sending message', error);
       return res.status(400).json({ message: 'Some server problems, please try again', errors });
     }
   },
 
-  selectKey: function(req, res) {
-    let actions = req.requestObject.actions;
-    let action = actions.find((action) => {
-      return action.name == "empty_lockers"
-    });
-
-    let selectedOptions = action.selected_options;
-    let selection = selectedOptions[0].value;
-
-    // UPDATE LIST OF EMPTY KEYS FOR SAID FLOOR
-    // SAVE KEY TO THE APPROPRIATE USER
-    User.findOne({ where: {
-      userId: req.body.user_id
-    } }).then((user) => {
-      if (!user) return ;
-      let cell = user.cell;
-      Cell.getAllocations({ where: {
-        lockerNumber: selection
-      } }).then((allocation) => {
-        let allocation = allocation[0];
-        Allocation.update({
-          requestStatus: 'request'          
-        }, { where: { id: allocation.id } })
-          .then((allocation) => {
-            User.update({ allocationId: allocation.id },
-              { where: { userId: req.body.user_id } })
-              .then((user) => {
-                // sendMessage()
-              })
-          });
-      });
-    });
-  }
+  // selectKey(req, res) {
+  //   const actions = req.requestObject.actions;
+  //   const action = actions.find((action) => {
+  //     return action.name == 'empty_lockers';
+  //   });
+  //
+  //   const selectedOptions = action.selected_options;
+  //   const selection = selectedOptions[0].value;
+  //
+  //   // UPDATE LIST OF EMPTY KEYS FOR SAID FLOOR
+  //   // SAVE KEY TO THE APPROPRIATE USER
+  //   User.findOne({ where: {
+  //     userId: req.body.user_id
+  //   } }).then((user) => {
+  //     if (!user) return;
+  //     const cell = user.cell;
+  //     Cell.getAllocations({ where: {
+  //       lockerNumber: selection
+  //     } }).then((allocation) => {
+  //       const allocation = allocation[0];
+  //       Allocation.update({
+  //         requestStatus: 'request'
+  //       }, { where: { id: allocation.id } })
+  //         .then((allocation) => {
+  //           User.update({ allocationId: allocation.id },
+  //             { where: { userId: req.body.user_id } })
+  //             .then((user) => {
+  //               // sendMessage()
+  //             });
+  //         });
+  //     });
+  //   });
+  // }
 };
 
 export default slack;
