@@ -12,6 +12,9 @@
     "db_seed": "node_modules/.bin/sequelize db:seed:all",
     "db_undo_seed": "node_modules/.bin/sequelize db:seed:undo:all"
   },
+  "engines": {
+    "node": "8.9.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/eshaibu/locker-allocation-sever.git"

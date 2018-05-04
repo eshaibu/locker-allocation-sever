@@ -41,7 +41,7 @@ const cellController = {
         });
         const unavailableLockers = lockerOccupiedInCell.map(allocation => allocation.lockerNumber);
         const availableLockers = lockerNoArray.filter(lockerNumber => !unavailableLockers.includes(lockerNumber));
-        const cell = { ...cellExist.dataValues, lockerNoArray, unavailableLockers, availableLockers };
+        const cell = { ...cellExist.dataValues, unavailableLockers, availableLockers };
         return res.status(200).json({ message: 'Cell retrieved', data: cell });
       }
       return res.status(404).json({ message: 'Cell does not exist' });
