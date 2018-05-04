@@ -19,6 +19,7 @@ const routes = (router) => {
     .delete(cellController.deleteCell);
 
   router.route('/allocations')
+    .get(allocationController.list)
     .post(allocationController.create);
 
   router.route('/allocations/:id')

@@ -1,6 +1,6 @@
 import Validator from 'validatorjs';
-import db from '../models/';
 import Sequelize from 'sequelize';
+import db from '../models/';
 
 const Op = Sequelize.Op;
 const allocationModel = db.Allocation;
@@ -80,6 +80,27 @@ const allocationController = {
       return res.status(404).json({ message: 'Allocation request does not exist' });
     } catch (errors) {
       return res.status(400).json({ message: 'Some server problems, please try again', errors });
+    }
+  },
+
+  async list(req, res) {
+    try {
+      const page = (req.query.page <= 0 || req.query.page === undefined) ? 0 : req.query.page - 1;
+      const limit = req.query.limit || 4;
+      const offset = limit * page;
+      const order = (req.query.order && req.query.order.toLowerCase() === 'desc')
+        ? [['createdAt', 'DESC']] : [['createdAt', 'ASC']];
+      const queryBuilder = {
+        limit, offset, order,
+        include: [{
+          model: cellModel,
+          attributes: ['name', 'numberOfLockers']
+        }]
+      };
+      const data = await allocationModel.findAndCountAll(queryBuilder);
+      return res.status(200).json({message: 'List of requests', data });
+    } catch (errors) {
+      return res.status(400).json({message: 'Some server problems, please try again', errors});
     }
   }
 };
