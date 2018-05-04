@@ -2,7 +2,7 @@ import User from '../models/user';
 import { testSlackToken, sendMessage } from '../helpers/slackHelpers';
 import db from '../models/';
 
-import Team from '../models/Team';
+const Team = db.Team;
 
 const slackAuth = (req, res, next) => {
   if (!req.body.token) return res.send('No token provided');
