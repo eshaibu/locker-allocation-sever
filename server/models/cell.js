@@ -1,4 +1,3 @@
-'use strict';
 const cellModel = (sequelize, DataTypes) => {
   const Cell = sequelize.define('Cell', {
     name: {
@@ -12,7 +11,7 @@ const cellModel = (sequelize, DataTypes) => {
   }, {
     paranoid: true,
   });
-  Cell.associate = function(models) {
+  Cell.associate = (models) => {
     // associations can be defined here
     Cell.hasMany(models.Allocation, {
       foreignKey: 'cellId',

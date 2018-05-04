@@ -1,6 +1,6 @@
 import Validator from 'validatorjs';
-import db from '../models/';
 import Sequelize from 'sequelize';
+import db from '../models/';
 
 const Op = Sequelize.Op;
 const cellModel = db.Cell;
@@ -8,12 +8,12 @@ const allocationModel = db.Allocation;
 
 const cellController = {
   async create(req, res) {
-    try{
+    try {
       const { name, numberOfLockers } = req.body;
       const validator = new Validator(req.body, cellModel.createRules());
       if (validator.passes()) {
         const nameExist = await cellModel.findOne({ where: { name } });
-        if(!nameExist) {
+        if (!nameExist) {
           const cell = await cellModel.create({ name, numberOfLockers });
           return res.status(201).json({ message: 'Cell creation successful', data: cell });
         }
@@ -26,10 +26,10 @@ const cellController = {
   },
 
   async retrieve(req, res) {
-    try{
+    try {
       const cellExist = await cellModel.findById(req.params.id);
-      if(cellExist) {
-        const lockerNoArray = Array.from({length: cellExist.numberOfLockers}, (v, k) => k+1);
+      if (cellExist) {
+        const lockerNoArray = Array.from({ length: cellExist.numberOfLockers }, (v, k) => k + 1);
         const lockerOccupiedInCell = await allocationModel.findAll({
           where: {
             cellId: req.params.id,
@@ -39,8 +39,8 @@ const cellController = {
             expired: null,
           }
         });
-        const  unavailableLockers = lockerOccupiedInCell.map((allocation) => allocation.lockerNumber);
-        const availableLockers = lockerNoArray.filter((lockerNumber) => !unavailableLockers.includes(lockerNumber));
+        const unavailableLockers = lockerOccupiedInCell.map(allocation => allocation.lockerNumber);
+        const availableLockers = lockerNoArray.filter(lockerNumber => !unavailableLockers.includes(lockerNumber));
         const cell = { ...cellExist.dataValues, lockerNoArray, unavailableLockers, availableLockers };
         return res.status(200).json({ message: 'Cell retrieved', data: cell });
       }
@@ -51,8 +51,8 @@ const cellController = {
   },
 
   async list(req, res) {
-    try{
-        const cells = await cellModel.findAndCountAll();
+    try {
+      const cells = await cellModel.findAndCountAll();
       return res.status(200).json({ message: 'List of cells', data: cells });
     } catch (errors) {
       return res.status(400).json({ message: 'Some server problems, please try again', errors });
@@ -60,14 +60,26 @@ const cellController = {
   },
 
   async update(req, res) {
-    try{
+    try {
       const { name, numberOfLockers } = req.body;
       const cellExist = await cellModel.findById(req.params.id);
-      if(cellExist) {
+      if (cellExist) {
         const validator = new Validator(req.body, cellModel.createRules());
         if (validator.passes()) {
           const nameExist = await cellModel.findOne({ where: { name, id: { [Op.ne]: req.params.id } } });
-          if(!nameExist) {
+          if (!nameExist) {
+            // check when locker reduced, ensure you remove all allocations to those lockers not in
+            // current capacity (rare case)
+            if (numberOfLockers < cellExist.numberOfLockers) {
+              await allocationModel.destroy({
+                where: {
+                  cellId: req.params.id,
+                  lockerNumber: {
+                    [Op.gt]: numberOfLockers
+                  }
+                }
+              });
+            }
             const cell = await cellExist.update({ name, numberOfLockers });
             return res.status(201).json({ message: 'Cell updated successfully', data: cell });
           }
@@ -82,9 +94,9 @@ const cellController = {
   },
 
   async deleteCell(req, res) {
-    try{
+    try {
       const cellExist = await cellModel.findById(req.params.id);
-      if(cellExist) {
+      if (cellExist) {
         await cellExist.destroy();
         return res.status(200).json({ message: 'Deleted successfully' });
       }

@@ -1,4 +1,3 @@
-'use strict';
 const allocationModel = (sequelize, DataTypes) => {
   const Allocation = sequelize.define('Allocation', {
     requestBy: {
@@ -25,7 +24,7 @@ const allocationModel = (sequelize, DataTypes) => {
   }, {
     paranoid: true,
   });
-  Allocation.associate = function(models) {
+  Allocation.associate = (models) => {
     // associations can be defined here
     Allocation.belongsTo(models.Cell, {
       foreignKey: 'cellId',

@@ -8,9 +8,9 @@ const cellModel = db.Cell;
 
 const allocationController = {
   async create(req, res) {
-    try{
+    try {
       const { requestBy, cellId, lockerNumber, requestStatus } = req.body;
-      const validator = new Validator(req.body, allocationModel.createRules(), { "email.requestBy": 'Invalid Email' });
+      const validator = new Validator(req.body, allocationModel.createRules(), { 'email.requestBy': 'Invalid Email' });
       if (validator.passes()) {
         // ensure user eligible to make request
         const checkUserCanRequest = await allocationModel.findOne({
@@ -50,6 +50,9 @@ const allocationController = {
 
         // Ensure locker number passed within range of locker numbers in cell
         const cell = await cellModel.findById(cellId);
+        if (!cell) {
+          return res.status(404).json({ message: 'Cell deos not exist' });
+        }
         if (lockerNumber > 0 && lockerNumber <= cell.numberOfLockers) {
           const data = await allocationModel.create({ requestBy, cellId, lockerNumber, requestStatus });
           return res.status(201).json({ message: 'Locker request successful', data });
@@ -63,14 +66,14 @@ const allocationController = {
   },
 
   async approveOrExpire(req, res) {
-    try{
+    try {
       const allocationExist = await allocationModel.findById(req.params.id);
-      if(allocationExist) {
-        if(req.body.action === 'approve'){
+      if (allocationExist) {
+        if (req.body.action === 'approve') {
           await allocationExist.update({ requestStatus: 'approved', expired: null });
           return res.status(201).json({ message: 'Approved and key collected' });
         }
-        if(req.body.action === 'reject'){
+        if (req.body.action === 'reject') {
           await allocationExist.update({ requestStatus: 'rejected', expired: new Date() });
           return res.status(201).json({ message: 'Rejected request' });
         }
@@ -91,16 +94,23 @@ const allocationController = {
       const order = (req.query.order && req.query.order.toLowerCase() === 'desc')
         ? [['createdAt', 'DESC']] : [['createdAt', 'ASC']];
       const queryBuilder = {
-        limit, offset, order,
+        limit,
+        offset,
+        order,
         include: [{
           model: cellModel,
           attributes: ['name', 'numberOfLockers']
         }]
       };
+      if (req.query.cell) {
+        queryBuilder.where = {
+          cellId: req.query.cell
+        };
+      }
       const data = await allocationModel.findAndCountAll(queryBuilder);
-      return res.status(200).json({message: 'List of requests', data });
+      return res.status(200).json({ message: 'List of requests', data });
     } catch (errors) {
-      return res.status(400).json({message: 'Some server problems, please try again', errors});
+      return res.status(400).json({ message: 'Some server problems, please try again', errors });
     }
   }
 };

@@ -10,7 +10,7 @@ const routes = (router) => {
 
   router.route('/cells')
     .post(cellController.create)
-    .get(cellController.list)
+    .get(cellController.list);
 
 
   router.route('/cells/:id')
@@ -23,8 +23,7 @@ const routes = (router) => {
     .post(allocationController.create);
 
   router.route('/allocations/:id')
-    .patch(allocationController.approveOrExpire)
-    // .get(allocationController.retrieve)
+    .patch(allocationController.approveOrExpire);
 };
 
 export default routes;
