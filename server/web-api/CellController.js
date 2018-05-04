@@ -1,3 +1,4 @@
+/* eslint no-loop-func:0 */
 import Validator from 'validatorjs';
 import Sequelize from 'sequelize';
 import db from '../models/';
@@ -53,8 +54,58 @@ const cellController = {
   async list(req, res) {
     try {
       const cells = await cellModel.findAndCountAll();
-      return res.status(200).json({ message: 'List of cells', data: cells });
+
+      // console.log(cells.rows);
+
+      const cellsResult = [];
+      for (let i = 0; i < cells.rows.length; i += 1) {
+        allocationModel.findAll({
+          where: {
+            cellId: cells.rows[i].id,
+            requestStatus: {
+              [Op.ne]: 'rejected'
+            },
+            expired: null,
+          }
+        })
+          .then((lockerOccupiedInCell) => {
+            const lockerNoArray = Array.from({ length: cells.rows[i].numberOfLockers }, (v, k) => k + 1);
+            const unavailableLockers = lockerOccupiedInCell.map(allocation => allocation.lockerNumber);
+            const availableLockers = lockerNoArray.filter(lockerNumber => !unavailableLockers.includes(lockerNumber));
+            const cellWithInfo = { ...cells.rows[i], unavailableLockers, availableLockers };
+            console.log(cellWithInfo, '>>>>>>>>');
+            cellsResult.push(cellWithInfo);
+          });
+      }
+
+      return res.status(200).json({ message: 'List of cells', data: cellsResult });
+
+      // const cellsResult = cells.rows.map((cell) => {
+      //   const lockerNoArray = Array.from({ length: cell.numberOfLockers }, (v, k) => k + 1);
+      //   const lockerOccupiedInCell = allocationModel.findAll({
+      //     where: {
+      //       cellId: cell.id,
+      //       requestStatus: {
+      //         [Op.ne]: 'rejected'
+      //       },
+      //       expired: null,
+      //     }
+      //   });
+      //   const unavailableLockers = lockerOccupiedInCell.map(allocation => allocation.lockerNumber);
+      //   const availableLockers = lockerNoArray.filter(lockerNumber => !unavailableLockers.includes(lockerNumber));
+      //   const cellWithInfo = { ...cell.dataValues, unavailableLockers, availableLockers };
+      //   console.log(cellWithInfo, '>>>>>>>>');
+      //   // cellsResult.push(cellWithInfo);
+      //   return cellWithInfo;
+      // });
+
+      // Promise.all(cellsResult).then((completed) => {
+      //   // document.writeln( `\nResult: ${completed}`)
+      //   return res.status(200).json({ message: 'List of cells', data: completed });
+      // });
+      // return res.status(200).json({ message: 'List of cells', data: cells });
     } catch (errors) {
+      console.log(errors);
       return res.status(400).json({ message: 'Some server problems, please try again', errors });
     }
   },
