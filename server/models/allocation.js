@@ -22,7 +22,9 @@ const allocationModel = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
-  }, {});
+  }, {
+    paranoid: true,
+  });
   Allocation.associate = function(models) {
     // associations can be defined here
     Allocation.belongsTo(models.Cell, {
