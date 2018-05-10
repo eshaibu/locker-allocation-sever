@@ -16,10 +16,11 @@ module.exports = {
       },
       teamId: {
         allowNull: true,
-        type: Sequelize.INTEGER,
+        type: Sequelize.STRING,
+        unique: true,
         references: {
           model: 'Teams',
-          key: 'id',
+          key: 'teamId',
           as: 'teamId'
         }
       },
@@ -33,6 +34,7 @@ module.exports = {
         }
       },
       cellId: {
+        allowNull: true,
         type: Sequelize.INTEGER,
         references: {
           model: 'Cells',

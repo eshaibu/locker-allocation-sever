@@ -2,11 +2,7 @@ const allocationModel = (sequelize, DataTypes) => {
   const Allocation = sequelize.define('Allocation', {
     requestBy: {
       type: DataTypes.STRING,
-      allowNull: false
-    },
-    cellId: {
-      type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: true
     },
     lockerNumber: {
       type: DataTypes.INTEGER,
@@ -21,13 +17,16 @@ const allocationModel = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
-  }, {
-    paranoid: true,
   });
   Allocation.associate = (models) => {
     // associations can be defined here
     Allocation.belongsTo(models.Cell, {
       foreignKey: 'cellId',
+      onDelete: 'CASCADE'
+    });
+    
+    Allocation.hasOne(models.User, {
+      foreignKey: 'allocationId',
       onDelete: 'CASCADE'
     });
   };

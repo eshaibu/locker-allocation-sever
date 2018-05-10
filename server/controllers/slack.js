@@ -1,20 +1,19 @@
+
 import { WebClient } from '@slack/client';
 import buildUrl from 'build-url';
 import axios from 'axios';
 import uuid from 'uuid';
 import async from 'async';
 import Sequelize from 'sequelize';
-import { testSlackToken } from '../helpers/slackHelpers';
+import { testSlackToken, sendMessage } from '../helpers/slackHelpers';
 import db from '../models/';
 
-import User from '../models/user';
-import Team from '../models/team';
-import Cell from '../models/cell';
+const Team = db.Team;
+const User = db.User;
+const Cell = db.Cell;
 
 const Op = Sequelize.Op;
 
-const cellModel = db.Cell;
-const userModel = db.User;
 const allocationModel = db.Allocation;
 
 const authUrl = 'https://slack.com/oauth/authorize';
@@ -23,47 +22,54 @@ const scope = 'commands,bot,im:write,reactions:read,users.profile:read,chat:writ
 const slack = {
   authorise(req, res, next) {
     const teamId = req.params.id.toUpperCase();
+    let state;
     Team.findOne({
       where: {
         teamId
       }
     }).then((team) => {
       if (!team) {
-        const state = uuid.v4();
+        state = uuid.v4();
         Team.create({
           regState: state,
           teamId
         })
           .then((team) => {
-            console.log(team);
           })
           .catch(error => console.log(error));
-      } else {
-        state = team.regState;
-      }
-
+        } else {
+          state = team.regState;
+        }
+      
       const queryParams = {
-        client_id: process.env.SLACK_CLIENT_ID,
-        scope,
-        redirect_uri: `${process.env.BASE_URI}slack/authenticate`,
-        state
-      };
+              client_id: process.env.SLACK_CLIENT_ID,
+              scope,
+              redirect_uri: `${process.env.BASE_URI}slack/authenticate`,
+              state
+            };
 
-      const url = buildUrl(authUrl, { queryParams });
-      return res.redirect(url);
-    });
+            const url = buildUrl(authUrl, { queryParams });
+            return res.redirect(url);
+    })
+    .catch((error) => (console.log(error)))
   },
 
   saveToken(req, res, next) {
     if (!req.query.code) {
-      return res.redirect(`${process.env.BASE_URI}fail`);
+      return res.status(401).send({ message: 'code not provided, contact developer' })
+    }
+    
+    if (!req.query.state) {
+      return res.status(401).send({ message: 'state not provided, contact developer' })
     }
 
     const code = req.query.code;
     const regState = req.query.state;
     const authed = new WebClient();
 
-    authed.oauth.access(process.env.SLACK_CLIENT_ID, process.env.SLACK_CLIENT_SECRET, code)
+    authed.oauth.access({ client_id: process.env.SLACK_CLIENT_ID,
+                          client_secret: process.env.SLACK_CLIENT_SECRET,
+                          code})
       .then((data) => {
         // TODO: save the access token to the team
 
@@ -87,8 +93,10 @@ const slack = {
                         cb();
                       })
                       .catch((error) => {
-                        return res.send('Error saving slack token');
+                        return res.send('Error saving slack token', error);
                       });
+                    
+                    User
                   },
                   function (cb) {
                     Team.update({ bot: data.bot.bot_access_token, slackToken: data.access_token }, { where: { teamId } })
@@ -99,7 +107,7 @@ const slack = {
                         return res.send('Error saving slack token');
                       });
                   }], (er, result) => {
-                  return p.redirect(`${process.env.BASE_URI}calendar/authorise/${userid}`);
+                  return res.send({ message: 'ok' });
                 });
               })
               .catch((error) => {
@@ -114,51 +122,68 @@ const slack = {
         }
       })
       .catch((error) => {
-        console.log('Some Auth error', e);
+        console.log('Some Auth error', error);
       });
   },
 
   findKey: async (req, res) => {
     try {
-      const cellText = (req.body.text).toLowerCase();
-      const authed = new WebClient(req.body.token);
+      const cellText = req.body.text;
+      const authed = new WebClient(req.team.token);
 
-      const cells = await cellModel.findAll();
+      const cells = await Cell.findAll();
       const cellNames = cells.map(cell => cell.name);
       const cellNamesString = cellNames.join(', ');
 
       const cell = cells.find(cell => cell.name === cellText);
 
-      const checkModel = cellNames.includes(cellText);
-
-      if (!checkModel) {
-        const errorMessage = `Please enter a valid location, one of the item in list [${cellNamesString}]`;
-        return authed.chat.postMessage({ channel: q.body.channel_id, text: errorMessage });
+      if (!cell) {
+        let errorMessage;
+        if (cellNamesString.length === 0) {
+          errorMessage = 'There are no locations for your workspace. Please contact Facilities';
+        } else {
+          errorMessage = `Please enter a valid location, one of the item in list [${cellNamesString}]`;
+        }
+        return sendMessage({ responseUrl: req.body.response_url,
+                             message: errorMessage });  
       }
 
-      const user = await userModel.findOne({
+      const user = await User.findOne({
         where: {
           userId: req.body.user_id
         }
       });
       if (!user) {
-        await userModel.create({
+        await User.create({
           userId: req.body.user_id,
           teamId: req.body.team_id,
           cellId: cell.id,
-          slacktoken: req.body.token,
+          slacktoken: req.team.token,
           email: req.body.user_name,
           regstate: uuid.v4()
         });
       } else {
-        await userModel.update({ cellId: cell.id }, { where: {
+        await User.update({ cellId: cell.id, slacktoken: req.team.token, email: req.body.user_name }, { where: {
           userId: req.body.user_id
         } });
+        if (user.allocationId) {
+          const allocation = await allocationModel.findOne({
+            where: { id: user.allocationId }
+          });
+          const requestedCell = await allocation.getCell();
+          const messagePrompt = `Your request for *key ${allocation.lockerNumber}* on ${requestedCell.name} is at the *${allocation.requestStatus} phase*. Please contact Facilities.`
+          const message = {
+            channel: req.body.user_id,
+            text: messagePrompt
+          };
+          const result = await authed.chat.postMessage(message);
+          return result;
+        }
       }
 
       const lockerNoArray = Array.from({ length: cell.numberOfLockers }, (v, k) => k + 1);
       const lockerOccupiedInCell = await allocationModel.findAll({
-        where: {
+       where: {
           cellId: cell.id,
           requestStatus: {
             [Op.ne]: 'rejected'
@@ -166,71 +191,116 @@ const slack = {
           expired: null,
         }
       });
+      
+       
       const unavailableLockers = lockerOccupiedInCell.map(allocation => allocation.lockerNumber);
       const availableLockers = lockerNoArray.filter(lockerNumber => !unavailableLockers.includes(lockerNumber));
 
+      
+      let messagePayload;
 
+     if (availableLockers.length > 0) {
       const options = availableLockers.map(keyValue => ({
         text: `Key ${keyValue}`,
         value: keyValue
       }));
 
-      const messagePayload = {
-        channel: req.body.channel_id,
-        text: `Select a locker from ${cell.name}`,
-        fallback: `Select a locker from ${cell.name}`,
-        color: '#3AA3E3',
-        attachment_type: 'default',
-        callback_id: 'locker_selection',
-        actions: [{
-          name: 'empty_lockers',
-          text: `Pick a locker on ${cell.name}`,
-          type: 'select',
-          options
+      messagePayload = {
+        channel: req.body.user_id,
+        text: 'Select a locker with locker',
+        attachments: [{
+          text: `Select a locker from ${cell.name}`,
+          fallback: `Select a locker from ${cell.name}`,
+          color: '#3AA3E3',
+          attachment_type: 'default',
+          callback_id: 'locker_selection',
+          actions: [{
+            name: 'empty_lockers',
+            text: `Pick a key`,
+            type: 'select',
+            options
+          }]
         }]
       };
-
+     } else {
+       messagePayload = {
+         channel: req.body.user_id,
+         text: `There are no empty lockers on ${cell.name}. Please contact Facilites`
+       };
+     }
+      
+      
       const result = await authed.chat.postMessage(messagePayload);
       console.log('message sent', result);
     } catch (errors) {
-      console.log('error sending message', error);
+      console.log(errors, 'the error message');
       return res.status(400).json({ message: 'Some server problems, please try again', errors });
     }
   },
 
-  // selectKey(req, res) {
-  //   const actions = req.requestObject.actions;
-  //   const action = actions.find((action) => {
-  //     return action.name == 'empty_lockers';
-  //   });
-  //
-  //   const selectedOptions = action.selected_options;
-  //   const selection = selectedOptions[0].value;
-  //
-  //   // UPDATE LIST OF EMPTY KEYS FOR SAID FLOOR
-  //   // SAVE KEY TO THE APPROPRIATE USER
-  //   User.findOne({ where: {
-  //     userId: req.body.user_id
-  //   } }).then((user) => {
-  //     if (!user) return;
-  //     const cell = user.cell;
-  //     Cell.getAllocations({ where: {
-  //       lockerNumber: selection
-  //     } }).then((allocation) => {
-  //       const allocation = allocation[0];
-  //       Allocation.update({
-  //         requestStatus: 'request'
-  //       }, { where: { id: allocation.id } })
-  //         .then((allocation) => {
-  //           User.update({ allocationId: allocation.id },
-  //             { where: { userId: req.body.user_id } })
-  //             .then((user) => {
-  //               // sendMessage()
-  //             });
-  //         });
-  //     });
-  //   });
-  // }
+  selectKey: async (req, res) => {
+    console.log('are we handling selections?');
+    const actions = req.requestObject.actions;
+    const action = actions.find((action) => {
+      return action.name == 'empty_lockers';
+    });
+  
+    const selectedOptions = action.selected_options;
+    const selection = selectedOptions[0].value;
+    
+    const user = await User.findOne({
+      where: {
+        userId: req.body.user_id
+      }
+    });
+    
+    if (!user) return ;
+    
+    if(user.allocationId) {
+      return sendMessage({ responseUrl: req.requestObject.response_url, 
+                    message: 'You have already requested for a key'});
+    };
+   
+    const cellId = user.cellId;
+    const cell =  await Cell.findOne({
+      where: { id: cellId}
+    });
+    
+    if (!cell) return;
+    
+    const allocation = await cell.getAllocations({
+      where: {
+        lockerNumber: selection
+      }
+    });
+    
+    if (allocation.length === 0) {
+      await allocationModel.create({
+        cellId,
+        requestStatus: 'request',
+        requestBy: req.requestObject.user.name,
+        lockerNumber: selection
+      });
+    } else {
+      const updatedAllocation = await allocationModel.update({
+        requestStatus: 'request',
+        requestBy: req.requestObject.user.name
+      }, {
+        where: { lockerNumber: selection }
+      });
+    }
+    
+     const userAllocated = await User.update({
+        allocationId: allocation[0].dataValues.id
+      }, {
+        where: { userId: req.body.user_id }
+      });
+    
+    
+    
+    sendMessage({ responseUrl: req.requestObject.response_url, 
+                 message: 'We are processing your request, contact Facilities for your approved key'});
+  }
 };
 
 export default slack;

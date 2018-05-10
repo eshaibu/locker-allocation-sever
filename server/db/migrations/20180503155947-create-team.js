@@ -12,6 +12,7 @@ module.exports = {
         type: Sequelize.STRING
       },
       teamId: {
+        unique: true,
         type: Sequelize.STRING
       },
       slackToken: {

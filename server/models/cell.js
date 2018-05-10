@@ -16,6 +16,10 @@ const cellModel = (sequelize, DataTypes) => {
     Cell.hasMany(models.Allocation, {
       foreignKey: 'cellId',
       as: 'allocations'
+    });   
+    Cell.hasMany(models.User, {
+      foreignKey: 'cellId',
+      as: 'users'
     });
   };
   Cell.createRules = () => ({
