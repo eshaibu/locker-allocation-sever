@@ -51,7 +51,7 @@ const allocationController = {
         // Ensure locker number passed within range of locker numbers in cell
         const cell = await cellModel.findById(cellId);
         if (!cell) {
-          return res.status(404).json({ message: 'Cell deos not exist' });
+          return res.status(404).json({ message: 'Cell does not exist' });
         }
         if (lockerNumber > 0 && lockerNumber <= cell.numberOfLockers) {
           const data = await allocationModel.create({ requestBy, cellId, lockerNumber, requestStatus });
@@ -70,8 +70,8 @@ const allocationController = {
       const allocationExist = await allocationModel.findById(req.params.id);
       if (allocationExist) {
         if (req.body.action === 'approve') {
-          await allocationExist.update({ requestStatus: 'approved', expired: null });
-          return res.status(201).json({ message: 'Approved and key collected' });
+          const approved = await allocationExist.update({ requestStatus: 'approved', expired: null });
+          return res.status(201).json({ message: 'Approved and key collected', data: approved });
         }
         if (req.body.action === 'reject') {
           await allocationExist.update({ requestStatus: 'rejected', expired: new Date() });
@@ -102,9 +102,14 @@ const allocationController = {
           attributes: ['name', 'numberOfLockers']
         }]
       };
-      if (req.query.cell) {
+      // requestStatus=request
+      if (req.query.requestStatus) {
+        if (!['request', 'approved', 'rejected'].includes(req.query.requestStatus)) {
+          return res.status(200).json({ message: 'List of requests', data: { count: 0, row: [] } });
+        }
         queryBuilder.where = {
-          cellId: req.query.cell
+          requestStatus: req.query.requestStatus,
+          expired: null
         };
       }
       const data = await allocationModel.findAndCountAll(queryBuilder);
