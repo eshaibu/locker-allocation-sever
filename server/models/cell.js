@@ -1,6 +1,5 @@
-'use strict';
-module.exports = (sequelize, DataTypes) => {
-  var Cell = sequelize.define('Cell', {
+const cellModel = (sequelize, DataTypes) => {
+  const Cell = sequelize.define('Cell', {
     name: {
       type: DataTypes.STRING,
       allowNull: false
@@ -9,8 +8,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false
     }
-  }, {});
-  Cell.associate = function(models) {
+  }, {
+    paranoid: true,
+  });
+  Cell.associate = (models) => {
     // associations can be defined here
     Cell.hasMany(models.Allocation, {
       foreignKey: 'cellId',
@@ -19,7 +20,9 @@ module.exports = (sequelize, DataTypes) => {
   };
   Cell.createRules = () => ({
     name: 'required',
-    numberOfLockers: 'required'
+    numberOfLockers: 'required|integer'
   });
   return Cell;
 };
+
+export default cellModel;

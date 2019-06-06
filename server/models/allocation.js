@@ -1,6 +1,5 @@
-'use strict';
-module.exports = (sequelize, DataTypes) => {
-  var Allocation = sequelize.define('Allocation', {
+const allocationModel = (sequelize, DataTypes) => {
+  const Allocation = sequelize.define('Allocation', {
     requestBy: {
       type: DataTypes.STRING,
       allowNull: false
@@ -22,13 +21,25 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
-  }, {});
-  Allocation.associate = function(models) {
+  }, {
+    paranoid: true,
+  });
+  Allocation.associate = (models) => {
     // associations can be defined here
     Allocation.belongsTo(models.Cell, {
       foreignKey: 'cellId',
       onDelete: 'CASCADE'
     });
   };
+
+  Allocation.createRules = () => ({
+    cellId: 'required',
+    requestBy: 'required|email',
+    lockerNumber: 'required|integer',
+    requestStatus: 'required|in:request,approved,rejected',
+  });
+
   return Allocation;
 };
+
+export default allocationModel;

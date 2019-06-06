@@ -1,6 +1,7 @@
 import http from 'http';
 import express from 'express';
 import logger from 'morgan';
+import cors from 'cors';
 import bodyParser from 'body-parser';
 import routes from './routes/routes';
 
@@ -15,6 +16,7 @@ routes(router);
 
 // Log requests to the console
 server.use(logger('dev'));
+server.use(cors());
 
 // Parse incoming request data
 server.use(bodyParser.json());
